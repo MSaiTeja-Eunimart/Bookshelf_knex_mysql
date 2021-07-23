@@ -1,6 +1,11 @@
 const Course=require('../../models/course');
 const teacher = require('../../models/teacher');
 const url = require('url');
+const Promise = require('bluebird');
+const { resolve } = require('path');
+const { rejects } = require('assert');
+const bookshelf = require('../../utils/db');
+
 
 class course{
     
@@ -38,17 +43,32 @@ class course{
     }
 
     async insertCourse(req,res){
-        await Course.forge({
-            
-            course_name:req.body.course_name
-                
-        }).save().then(data=>{
-            return res.json(data);
+        return new Promise(async(resolve,reject)=>{
+            bookshelf.transaction(async(t)=>{
+                try{
+                    await Course.forge({
+                        course_name:req.body.course_name
+                    }).save(null,{transacting: t})
+                    t.commit()
+                    res.status(400).json(true)
+                }
+                catch(err){
+                    console.log(err);
+                    await this.rollbackTransaction(t)
+                    res.status(201).json(false);
+                }
+            })
         })
-        .catch(err =>{
-            console.log(err);
-            //return res.send(err);
-        })
+
+        // await Course.forge({
+        //     course_name:req.body.course_name
+        // }).save().then(data=>{
+        //     return res.json(data);
+        // })
+        // .catch(err =>{
+        //     console.log(err);
+        //     //return res.send(err);
+        // })
     }
 
     async deleteCourse(req,res){
